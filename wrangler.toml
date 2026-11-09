@@ -1,0 +1,20 @@
+# How Cloudflare runs skel's service. The app's secrets are Worker secrets, set with
+# `bunx wrangler secret put`, and never written here.
+name = "skel-service"
+main = "src/index.ts"
+compatibility_date = "2026-10-01"
+
+[vars]
+# The app's name in its links, github.com/apps/<slug>.
+APP_SLUG = "skel"
+
+# The only lasting record: each repository's wake-up addresses.
+[[kv_namespaces]]
+binding = "WAKE"
+id = "put the id of your KV namespace here"
+
+# How often one person may ask for a token or register an address: 30 times a minute.
+[[ratelimits]]
+name = "LIMIT"
+namespace_id = "1001"
+simple = { limit = 30, period = 60 }
