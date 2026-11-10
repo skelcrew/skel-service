@@ -238,12 +238,13 @@ export default {
     const { pathname } = new URL(request.url);
     const route = `${request.method} ${pathname}`;
     try {
-      if (route === "GET /") return json({ install: installPage(env), client_id: env.CLIENT_ID });
-      if (route === "POST /token") return await token(request, env);
-      if (route === "POST /renew") return await renewal(request, env);
-      if (route === "POST /wake") return await wake(request, env, true);
-      if (route === "POST /unwake") return await wake(request, env, false);
-      if (route === "POST /webhook") return await webhook(request, env, context);
+      if (route === "GET /github")
+        return json({ install: installPage(env), client_id: env.CLIENT_ID });
+      if (route === "POST /github/token") return await token(request, env);
+      if (route === "POST /github/renew") return await renewal(request, env);
+      if (route === "POST /github/wake") return await wake(request, env, true);
+      if (route === "POST /github/unwake") return await wake(request, env, false);
+      if (route === "POST /github/webhook") return await webhook(request, env, context);
       return refuse(404, "nothing here");
     } catch (error) {
       console.error(`${route} failed: ${error instanceof Error ? error.message : "unknown"}`);

@@ -42,16 +42,17 @@ catches up.
 
 ## Calls
 
-All answers are JSON. A refusal is `{ "error": "<what to fix>" }` with an HTTP status.
+Every call is under `/github`, so a service for another tool can sit beside it later. All
+answers are JSON. A refusal is `{ "error": "<what to fix>" }` with an HTTP status.
 
 | Request | Body | Answer |
 | --- | --- | --- |
-| `GET /` | | `{ install, client_id }`: the page that installs the app, and the client ID the plugin's device flow signs in with |
-| `POST /token` | `{ repository }`, as `owner/name`, with your sign-in as `Authorization: Bearer` | `{ token, expires }` |
-| `POST /renew` | `{ refresh_token }` | `{ access_token, expires_in, refresh_token, refresh_token_expires_in }` |
-| `POST /wake` | `{ repository, url }`, with your sign-in | Nothing (204). Registers the address |
-| `POST /unwake` | `{ repository, url }`, with your sign-in | Nothing (204). Removes it |
-| `POST /webhook` | One of the app's events, from GitHub | Nothing (204). Wakes each address registered for its repository |
+| `GET /github` | | `{ install, client_id }`: the page that installs the app, and the client ID the plugin's device flow signs in with |
+| `POST /github/token` | `{ repository }`, as `owner/name`, with your sign-in as `Authorization: Bearer` | `{ token, expires }` |
+| `POST /github/renew` | `{ refresh_token }` | `{ access_token, expires_in, refresh_token, refresh_token_expires_in }` |
+| `POST /github/wake` | `{ repository, url }`, with your sign-in | Nothing (204). Registers the address |
+| `POST /github/unwake` | `{ repository, url }`, with your sign-in | Nothing (204). Removes it |
+| `POST /github/webhook` | One of the app's events, from GitHub | Nothing (204). Wakes each address registered for its repository |
 
 The plugin signs you in itself with GitHub's device flow, which needs only the client ID.
 
@@ -83,7 +84,7 @@ run with `bunx`, so nothing is added to this repository.
    [Updating an existing app](#updating-an-existing-app) says instead. To register it, open
    `register.html` in your browser. Change the organization in its form's address if the app
    isn't for `skelcrew`, and press the button. GitHub shows the app, and the button that
-   creates it. It then sends you to `https://skelcrew.dev/?code=…`: copy the code from the
+   creates it. It then sends you to `https://skelcrew.dev/github?code=…`: copy the code from the
    address. Within an hour, run:
 
    ```sh
@@ -119,7 +120,7 @@ run with `bunx`, so nothing is added to this repository.
    bunx wrangler deploy
    ```
 
-6. **Check it**: `curl https://skelcrew.dev/` answers the install page and client ID.
+6. **Check it**: `curl https://skelcrew.dev/github` answers the install page and client ID.
 
 ## Updating an existing app
 
@@ -130,7 +131,7 @@ its settings on GitHub match the manifest in `register.html`, then make its secr
    table above, and subscribe it to the events listed under the table. Each installation
    accepts the new permissions before they apply there.
 2. **Webhook.** Under General, set the homepage URL to `https://skelcrew.dev`, tick Webhook
-   Active, and set the webhook URL to `https://skelcrew.dev/webhook`.
+   Active, and set the webhook URL to `https://skelcrew.dev/github/webhook`.
 3. **Device flow.** Under General, tick "Enable Device Flow", and leave "Expire user
    authorization tokens" ticked.
 4. **Public.** Under Advanced, make it public, so anyone can install it.

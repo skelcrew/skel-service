@@ -125,7 +125,7 @@ const asUser = (body: object, token = "user-token"): RequestInit => ({
 });
 
 test("the service names the app's install page and its client ID", async () => {
-  const response = await send("/");
+  const response = await send("/github");
   expect(response.status).toBe(200);
   expect(await response.json()).toEqual({
     install: "https://github.com/apps/skelcrew/installations/new",
@@ -134,7 +134,7 @@ test("the service names the app's install page and its client ID", async () => {
 });
 
 test("a token works for one repository, and is made with the app's signed JWT", async () => {
-  const response = await send("/token", asUser({ repository: "simon/app" }));
+  const response = await send("/github/token", asUser({ repository: "simon/app" }));
   expect(response.status).toBe(200);
   expect(await response.json()).toEqual({ token: "ghs_repo", expires: "2026-11-09T19:00:00Z" });
   const made = asked.find((a) => a.url.endsWith("/access_tokens"));
@@ -165,7 +165,7 @@ test("a key in the PKCS#8 form GitHub doesn't give works too", async () => {
     publicKeyEncoding: { type: "spki", format: "pem" },
   });
   const response = await service.fetch(
-    new Request("https://skelcrew.dev/token", asUser({ repository: "simon/app" })),
+    new Request("https://skelcrew.dev/github/token", asUser({ repository: "simon/app" })),
     { ...env, PRIVATE_KEY: pkcs8.privateKey },
     context,
   );
@@ -173,7 +173,7 @@ test("a key in the PKCS#8 form GitHub doesn't give works too", async () => {
 });
 
 test("someone who can't push to the repository gets a token that only reads", async () => {
-  const response = await send("/token", asUser({ repository: "simon/public" }));
+  const response = await send("/github/token", asUser({ repository: "simon/public" }));
   expect(response.status).toBe(200);
   const made = asked.find((a) => a.url.endsWith("/access_tokens"));
   const body = JSON.parse(made?.body ?? "");
@@ -186,7 +186,7 @@ test("a repository's name may hold two dots in a row", async () => {
     url === "https://api.github.com/repos/simon/app..test"
       ? json({ full_name: "simon/app..test", name: "app..test", permissions: { push: true } })
       : github(method, url, auth);
-  const response = await send("/token", asUser({ repository: "simon/app..test" }));
+  const response = await send("/github/token", asUser({ repository: "simon/app..test" }));
   expect(response.status).toBe(404);
   expect(await response.text()).toContain(
     "Skelcrew's GitHub App isn't installed on simon/app..test",
@@ -194,28 +194,30 @@ test("a repository's name may hold two dots in a row", async () => {
 });
 
 test("no token for a repository you can't reach", async () => {
-  const response = await send("/token", asUser({ repository: "simon/secret" }));
+  const response = await send("/github/token", asUser({ repository: "simon/secret" }));
   expect(response.status).toBe(404);
   expect(asked.some((a) => a.url.endsWith("/access_tokens"))).toBe(false);
 });
 
 test("no token where the app isn't installed, and the answer says where to install it", async () => {
-  const response = await send("/token", asUser({ repository: "simon/other" }));
+  const response = await send("/github/token", asUser({ repository: "simon/other" }));
   expect(response.status).toBe(404);
   expect(await response.text()).toContain("https://github.com/apps/skelcrew/installations/new");
   expect(asked.some((a) => a.url.endsWith("/access_tokens"))).toBe(false);
 });
 
 test("no token without a sign-in GitHub accepts", async () => {
-  expect((await send("/token", asUser({ repository: "simon/app" }, "stale"))).status).toBe(401);
+  expect((await send("/github/token", asUser({ repository: "simon/app" }, "stale"))).status).toBe(
+    401,
+  );
   const unsigned = { method: "POST", body: JSON.stringify({ repository: "simon/app" }) };
-  expect((await send("/token", unsigned)).status).toBe(401);
+  expect((await send("/github/token", unsigned)).status).toBe(401);
 });
 
 test("a request that isn't what the service takes is refused", async () => {
-  expect((await send("/token", asUser({ repository: "../x" }))).status).toBe(400);
-  expect((await send("/token", asUser({ repository: "simon/.." }))).status).toBe(400);
-  expect((await send("/token", { ...asUser({}), body: "not json" })).status).toBe(400);
+  expect((await send("/github/token", asUser({ repository: "../x" }))).status).toBe(400);
+  expect((await send("/github/token", asUser({ repository: "simon/.." }))).status).toBe(400);
+  expect((await send("/github/token", { ...asUser({}), body: "not json" })).status).toBe(400);
   expect((await send("/nothing")).status).toBe(404);
 });
 
@@ -223,19 +225,19 @@ test("GitHub failing for a while asks you to try again, and never to sign in aga
   const down = (path: string) => (method: string, url: string, auth: string | null) =>
     url.endsWith(path) ? json({ message: "Server Error" }, 503) : github(method, url, auth);
   answer = down("/user");
-  expect((await send("/token", asUser({ repository: "simon/app" }))).status).toBe(502);
+  expect((await send("/github/token", asUser({ repository: "simon/app" }))).status).toBe(502);
   answer = down("/repos/simon/app");
-  expect((await send("/token", asUser({ repository: "simon/app" }))).status).toBe(502);
+  expect((await send("/github/token", asUser({ repository: "simon/app" }))).status).toBe(502);
   answer = down("/repos/simon/App/installation");
-  expect((await send("/token", asUser({ repository: "simon/app" }))).status).toBe(502);
+  expect((await send("/github/token", asUser({ repository: "simon/app" }))).status).toBe(502);
   answer = down("/login/oauth/access_token");
   const renewal = { method: "POST", body: JSON.stringify({ refresh_token: "ghr_old" }) };
-  expect((await send("/renew", renewal)).status).toBe(502);
+  expect((await send("/github/renew", renewal)).status).toBe(502);
 });
 
 test("someone asking for tokens too often is told to wait", async () => {
   limited.add("user:7");
-  const response = await send("/token", asUser({ repository: "simon/app" }));
+  const response = await send("/github/token", asUser({ repository: "simon/app" }));
   expect(response.status).toBe(429);
   expect(asked.some((a) => a.url.endsWith("/access_tokens"))).toBe(false);
 });
@@ -251,7 +253,7 @@ test("renewing a sign-in hands GitHub the app's secret, and the new sign-in back
           token_type: "bearer",
         })
       : github(method, url, auth);
-  const response = await send("/renew", {
+  const response = await send("/github/renew", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ refresh_token: "ghr_old" }),
@@ -276,7 +278,7 @@ test("a refresh token GitHub refuses renews nothing", async () => {
     url === "https://github.com/login/oauth/access_token"
       ? json({ error: "bad_refresh_token" })
       : github(method, url, auth);
-  const response = await send("/renew", {
+  const response = await send("/github/renew", {
     method: "POST",
     body: JSON.stringify({ refresh_token: "ghr_spent" }),
   });
@@ -299,18 +301,18 @@ async function signed(body: string, secret = "webhook-secret"): Promise<RequestI
 
 test("a wake-up address registered for a repository gets a bare request for each event", async () => {
   const wake = asUser({ repository: "simon/app", url: "https://demo.sprites.app/github" });
-  expect((await send("/wake", wake)).status).toBe(204);
+  expect((await send("/github/wake", wake)).status).toBe(204);
   const other = asUser({ repository: "simon/app", url: "https://work.example.com/github" });
-  expect((await send("/wake", other)).status).toBe(204);
+  expect((await send("/github/wake", other)).status).toBe(204);
   // Registering the same address again keeps one.
-  expect((await send("/wake", wake)).status).toBe(204);
+  expect((await send("/github/wake", wake)).status).toBe(204);
   asked = [];
   const event = JSON.stringify({
     action: "created",
     repository: { full_name: "simon/App" },
     comment: { body: "a secret plan" },
   });
-  expect((await send("/webhook", await signed(event))).status).toBe(204);
+  expect((await send("/github/webhook", await signed(event))).status).toBe(204);
   expect(asked.map((a) => [a.method, a.url, a.body])).toEqual([
     ["POST", "https://demo.sprites.app/github", ""],
     ["POST", "https://work.example.com/github", ""],
@@ -319,7 +321,10 @@ test("a wake-up address registered for a repository gets a bare request for each
 
 test("an event keeps at most six wake-ups open at once, as Workers allow", async () => {
   for (let n = 0; n < 8; n++)
-    await send("/wake", asUser({ repository: "simon/app", url: `https://m${n}.example.com/` }));
+    await send(
+      "/github/wake",
+      asUser({ repository: "simon/app", url: `https://m${n}.example.com/` }),
+    );
   const github = globalThis.fetch;
   let open = 0;
   let most = 0;
@@ -338,27 +343,33 @@ test("an event keeps at most six wake-ups open at once, as Workers allow", async
     { preconnect: realFetch.preconnect },
   );
   const event = JSON.stringify({ repository: { full_name: "simon/App" } });
-  expect((await send("/webhook", await signed(event))).status).toBe(204);
+  expect((await send("/github/webhook", await signed(event))).status).toBe(204);
   expect(woken).toBe(8);
   expect(most).toBeLessThanOrEqual(6);
 });
 
 test("an event for a repository with no address, or none at all, wakes nobody", async () => {
-  await send("/wake", asUser({ repository: "simon/app", url: "https://demo.sprites.app/github" }));
+  await send(
+    "/github/wake",
+    asUser({ repository: "simon/app", url: "https://demo.sprites.app/github" }),
+  );
   asked = [];
   const other = JSON.stringify({ repository: { full_name: "simon/public" } });
-  expect((await send("/webhook", await signed(other))).status).toBe(204);
+  expect((await send("/github/webhook", await signed(other))).status).toBe(204);
   const installation = JSON.stringify({ action: "created", installation: { id: 41 } });
-  expect((await send("/webhook", await signed(installation))).status).toBe(204);
+  expect((await send("/github/webhook", await signed(installation))).status).toBe(204);
   expect(asked).toEqual([]);
 });
 
 test("an event that isn't signed with the app's secret is dropped", async () => {
-  await send("/wake", asUser({ repository: "simon/app", url: "https://demo.sprites.app/github" }));
+  await send(
+    "/github/wake",
+    asUser({ repository: "simon/app", url: "https://demo.sprites.app/github" }),
+  );
   asked = [];
   const event = JSON.stringify({ repository: { full_name: "simon/App" } });
-  expect((await send("/webhook", await signed(event, "guess"))).status).toBe(401);
-  expect((await send("/webhook", { method: "POST", body: event })).status).toBe(401);
+  expect((await send("/github/webhook", await signed(event, "guess"))).status).toBe(401);
+  expect((await send("/github/webhook", { method: "POST", body: event })).status).toBe(401);
   expect(asked).toEqual([]);
 });
 
@@ -366,59 +377,66 @@ test("two machines registering at once both get woken, and removing one keeps th
   const first = "https://one.sprites.app/github";
   const second = "https://two.sprites.app/github";
   const [a, b] = await Promise.all([
-    send("/wake", asUser({ repository: "simon/app", url: first })),
-    send("/wake", asUser({ repository: "simon/app", url: second })),
+    send("/github/wake", asUser({ repository: "simon/app", url: first })),
+    send("/github/wake", asUser({ repository: "simon/app", url: second })),
   ]);
   expect([a.status, b.status]).toEqual([204, 204]);
   const event = JSON.stringify({ repository: { full_name: "simon/App" } });
   asked = [];
-  await send("/webhook", await signed(event));
+  await send("/github/webhook", await signed(event));
   expect(asked.map((x) => x.url).sort()).toEqual([first, second]);
-  await send("/unwake", asUser({ repository: "simon/app", url: first }));
+  await send("/github/unwake", asUser({ repository: "simon/app", url: first }));
   asked = [];
-  await send("/webhook", await signed(event));
+  await send("/github/webhook", await signed(event));
   expect(asked.map((x) => x.url)).toEqual([second]);
 });
 
 test("a repository takes at most 20 wake-up addresses", async () => {
   for (let n = 0; n < 20; n++)
-    await send("/wake", asUser({ repository: "simon/app", url: `https://m${n}.example.com/` }));
+    await send(
+      "/github/wake",
+      asUser({ repository: "simon/app", url: `https://m${n}.example.com/` }),
+    );
   const more = asUser({ repository: "simon/app", url: "https://m20.example.com/" });
-  expect((await send("/wake", more)).status).toBe(400);
+  expect((await send("/github/wake", more)).status).toBe(400);
   const again = asUser({ repository: "simon/app", url: "https://m0.example.com/" });
-  expect((await send("/wake", again)).status).toBe(204);
+  expect((await send("/github/wake", again)).status).toBe(204);
 });
 
 test("an address no longer registered gets nothing", async () => {
   const url = "https://demo.sprites.app/github";
-  await send("/wake", asUser({ repository: "simon/app", url }));
-  expect((await send("/unwake", asUser({ repository: "simon/app", url }))).status).toBe(204);
+  await send("/github/wake", asUser({ repository: "simon/app", url }));
+  expect((await send("/github/unwake", asUser({ repository: "simon/app", url }))).status).toBe(204);
   asked = [];
   const event = JSON.stringify({ repository: { full_name: "simon/App" } });
-  await send("/webhook", await signed(event));
+  await send("/github/webhook", await signed(event));
   expect(asked).toEqual([]);
   expect(store.size).toBe(0);
 });
 
 test("only someone who can push registers a wake-up address, and only an https one", async () => {
   const url = "https://demo.sprites.app/github";
-  expect((await send("/wake", asUser({ repository: "simon/public", url }))).status).toBe(403);
+  expect((await send("/github/wake", asUser({ repository: "simon/public", url }))).status).toBe(
+    403,
+  );
   const plain = asUser({ repository: "simon/app", url: "http://demo.sprites.app/github" });
-  expect((await send("/wake", plain)).status).toBe(400);
-  expect((await send("/wake", asUser({ repository: "simon/app", url }, "stale"))).status).toBe(401);
+  expect((await send("/github/wake", plain)).status).toBe(400);
+  expect(
+    (await send("/github/wake", asUser({ repository: "simon/app", url }, "stale"))).status,
+  ).toBe(401);
   expect(store.size).toBe(0);
 });
 
 test("only someone who can push removes a wake-up address", async () => {
   const url = "https://ada.sprites.app/github";
   expect(
-    (await send("/wake", asUser({ repository: "simon/public", url }, "owner-token"))).status,
+    (await send("/github/wake", asUser({ repository: "simon/public", url }, "owner-token"))).status,
   ).toBe(204);
-  const removal = await send("/unwake", asUser({ repository: "simon/public", url }));
+  const removal = await send("/github/unwake", asUser({ repository: "simon/public", url }));
   expect(removal.status).toBe(403);
   asked = [];
   const event = JSON.stringify({ repository: { full_name: "simon/public" } });
-  await send("/webhook", await signed(event));
+  await send("/github/webhook", await signed(event));
   expect(asked.map((a) => a.url)).toEqual([url]);
 });
 
@@ -427,12 +445,15 @@ test("the service logs no request body", async () => {
   const saved = { log: console.log, error: console.error, warn: console.warn };
   console.log = console.error = console.warn = (...words: unknown[]) => void logged.push(words);
   try {
-    await send("/wake", asUser({ repository: "simon/app", url: "https://demo.sprites.app/x" }));
+    await send(
+      "/github/wake",
+      asUser({ repository: "simon/app", url: "https://demo.sprites.app/x" }),
+    );
     answer = (method, url, auth) =>
       url === "https://demo.sprites.app/x" ? undefined : github(method, url, auth);
     const event = JSON.stringify({ repository: { full_name: "simon/App" }, secret: "plan-x" });
-    await send("/webhook", await signed(event));
-    await send("/token", asUser({ repository: "simon/app" }));
+    await send("/github/webhook", await signed(event));
+    await send("/github/token", asUser({ repository: "simon/app" }));
   } finally {
     Object.assign(console, saved);
   }
