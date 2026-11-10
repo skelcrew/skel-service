@@ -88,6 +88,14 @@ const env: Env = {
     delete: async (key) => {
       store.delete(key);
     },
+    // As Workers KV lists: the keys that start with the prefix, in order, at most 1000.
+    list: async ({ prefix }) => ({
+      keys: [...store.keys()]
+        .filter((name) => name.startsWith(prefix))
+        .sort()
+        .slice(0, 1000)
+        .map((name) => ({ name })),
+    }),
   },
   LIMIT: { limit: async ({ key }) => ({ success: !limited.has(key) }) },
 };
@@ -290,6 +298,33 @@ test("an event that isn't signed with the app's secret is dropped", async () => 
   expect((await send("/webhook", await signed(event, "guess"))).status).toBe(401);
   expect((await send("/webhook", { method: "POST", body: event })).status).toBe(401);
   expect(asked).toEqual([]);
+});
+
+test("two machines registering at once both get woken, and removing one keeps the other", async () => {
+  const first = "https://one.sprites.app/github";
+  const second = "https://two.sprites.app/github";
+  const [a, b] = await Promise.all([
+    send("/wake", asUser({ repository: "simon/app", url: first })),
+    send("/wake", asUser({ repository: "simon/app", url: second })),
+  ]);
+  expect([a.status, b.status]).toEqual([204, 204]);
+  const event = JSON.stringify({ repository: { full_name: "simon/App" } });
+  asked = [];
+  await send("/webhook", await signed(event));
+  expect(asked.map((x) => x.url).sort()).toEqual([first, second]);
+  await send("/unwake", asUser({ repository: "simon/app", url: first }));
+  asked = [];
+  await send("/webhook", await signed(event));
+  expect(asked.map((x) => x.url)).toEqual([second]);
+});
+
+test("a repository takes at most 20 wake-up addresses", async () => {
+  for (let n = 0; n < 20; n++)
+    await send("/wake", asUser({ repository: "simon/app", url: `https://m${n}.example.com/` }));
+  const more = asUser({ repository: "simon/app", url: "https://m20.example.com/" });
+  expect((await send("/wake", more)).status).toBe(400);
+  const again = asUser({ repository: "simon/app", url: "https://m0.example.com/" });
+  expect((await send("/wake", again)).status).toBe(204);
 });
 
 test("an address no longer registered gets nothing", async () => {

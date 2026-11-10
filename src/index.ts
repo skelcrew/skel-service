@@ -15,6 +15,7 @@ export type Env = {
     get(key: string): Promise<string | null>;
     put(key: string, value: string): Promise<void>;
     delete(key: string): Promise<void>;
+    list(options: { prefix: string }): Promise<{ keys: { name: string }[] }>;
   };
   LIMIT: { limit(options: { key: string }): Promise<{ success: boolean }> };
 };
@@ -59,15 +60,33 @@ function wakeAddress(value: unknown): string | null {
   }
 }
 
-// Where a repository's wake-up addresses are kept. GitHub's events name a repository as
-// GitHub writes it, so the key is its name as GitHub writes it too.
-const wakeKey = (fullName: string) => `wake:${fullName}`;
+// Where a repository's wake-up addresses are kept: one key each, under the repository's name
+// as GitHub writes it, since that is how its events name it. A name can't hold a colon, so
+// one repository's keys never start another's.
+const wakePrefix = (fullName: string) => `wake:${fullName}:`;
 
-// Returns the addresses registered for a repository.
+// Returns the key one address is kept under. Each address has a key of its own, so two
+// machines registering at once never write over each other. The address is hashed to keep
+// the key short and free of the characters a URL may hold.
+async function wakeKey(fullName: string, url: string): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(url));
+  // Buffer would need Node's compatibility on Workers, so the hex is spelled out.
+  const hex = [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0"));
+  return wakePrefix(fullName) + hex.join("");
+}
+
+// Returns the keys of the addresses registered for a repository.
+async function wakeKeys(env: Env, fullName: string): Promise<string[]> {
+  const listed = await env.WAKE.list({ prefix: wakePrefix(fullName) });
+  return listed.keys.map((key) => key.name);
+}
+
+// Returns the addresses registered for a repository. KV's listing can lag behind a removal,
+// so a key whose address is already gone is skipped.
 async function addresses(env: Env, fullName: string): Promise<string[]> {
-  const stored = await env.WAKE.get(wakeKey(fullName));
-  const parsed: unknown = stored ? JSON.parse(stored) : [];
-  return Array.isArray(parsed) ? parsed.filter((url) => typeof url === "string") : [];
+  const keys = await wakeKeys(env, fullName);
+  const urls = await Promise.all(keys.map((key) => env.WAKE.get(key)));
+  return urls.filter((url) => url !== null);
 }
 
 // Checks who is asking and what they can reach: their sign-in, how often they have asked, and
@@ -136,12 +155,17 @@ async function wake(request: Request, env: Env, add: boolean): Promise<Response>
   if (!url) return refuse(400, "a wake-up address must be an https URL");
   if (!repository.push)
     return refuse(403, `you can't push to ${repository.fullName}, so you can't set its wake-ups`);
-  const before = await addresses(env, repository.fullName);
-  const after = add ? [...new Set([...before, url])] : before.filter((known) => known !== url);
-  if (after.length > mostAddresses)
+  const key = await wakeKey(repository.fullName, url);
+  if (!add) {
+    await env.WAKE.delete(key);
+    return new Response(null, { status: 204 });
+  }
+  // Machines registering at once may each see room for one more, so the limit can be passed
+  // by a few. It only keeps the requests on each event bounded, so that is fine.
+  const known = await wakeKeys(env, repository.fullName);
+  if (!known.includes(key) && known.length >= mostAddresses)
     return refuse(400, `${repository.fullName} has ${mostAddresses} wake-up addresses already`);
-  if (after.length === 0) await env.WAKE.delete(wakeKey(repository.fullName));
-  else await env.WAKE.put(wakeKey(repository.fullName), JSON.stringify(after));
+  await env.WAKE.put(key, url);
   return new Response(null, { status: 204 });
 }
 

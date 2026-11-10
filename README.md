@@ -22,7 +22,8 @@ itself never needs it: with no plugins, skel runs on git alone.
 - **Which repository each of the app's events is for.** It checks the event's signature, reads
   `repository.full_name`, and drops the rest unread.
 - **Each machine's wake-up address.** This is its only lasting record, kept in Workers KV:
-  for each repository, the addresses registered for it. An address gets a bare `POST` with no
+  each address under a key of its own, `wake:<owner/name>:<SHA-256 of the address>`, so two
+  machines registering at once never undo each other. An address gets a bare `POST` with no
   body, which only says "look now".
 
 Code and issues never pass through it. git and the GitHub plugin talk to GitHub directly, with
@@ -147,4 +148,5 @@ bun install
 bun run check    # format, lint, typecheck and tests
 ```
 
-The tests run the Worker's fetch handler with GitHub faked and a Map in place of KV.
+The tests run the Worker's fetch handler with GitHub faked and a Map in place of KV, listed
+by prefix as KV lists.
