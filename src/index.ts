@@ -192,8 +192,8 @@ async function signedByGitHub(body: string, signature: string | null, secret: st
 }
 
 // Passes one of the app's events on: checks its signature, reads only which repository it is
-// for, and sends a bare request to each address registered for it. The rest of the event is
-// dropped unread. GitHub only waits ten seconds, so the requests go out after the answer.
+// for, and wakes each address registered for it. The rest of the event is dropped unread.
+// GitHub only waits ten seconds, so the requests go out after the answer.
 async function webhook(request: Request, env: Env, context: Context): Promise<Response> {
   const text = await request.text();
   if (!(await signedByGitHub(text, request.headers.get("x-hub-signature-256"), env.WEBHOOK_SECRET)))
@@ -207,15 +207,25 @@ async function webhook(request: Request, env: Env, context: Context): Promise<Re
   const repository = isRecord(event) && isRecord(event.repository) ? event.repository : null;
   const fullName = repositoryName(repository?.full_name);
   if (!fullName) return new Response(null, { status: 204 });
-  const urls = await addresses(env, fullName);
-  // A Sprite that sleeps wakes for as long as the request is open, and an address that is
-  // gone must not hold the rest up, so each gets a few seconds and its answer is ignored.
-  context.waitUntil(
-    Promise.allSettled(
-      urls.map((url) => fetch(url, { method: "POST", signal: AbortSignal.timeout(5000) })),
-    ),
-  );
+  context.waitUntil(wakeAll(await addresses(env, fullName)));
   return new Response(null, { status: 204 });
+}
+
+// Sends a bare request to each address, six at a time. A Worker keeps at most six requests
+// open and queues the rest, and a Sprite that sleeps holds its request open while it wakes.
+// Sent all at once, a queued request could spend its few seconds waiting for a slot. Each
+// gets 5 seconds from when it starts, so 20 addresses take at most 20 of the 30 seconds a
+// Worker may run after its answer.
+async function wakeAll(urls: string[]): Promise<void> {
+  for (let start = 0; start < urls.length; start += 6) {
+    await Promise.allSettled(
+      urls.slice(start, start + 6).map(async (url) => {
+        const response = await fetch(url, { method: "POST", signal: AbortSignal.timeout(5000) });
+        // The answer is ignored, but its body must be let go to free the slot.
+        await response.body?.cancel();
+      }),
+    );
+  }
 }
 
 // Returns the page that installs the app on repositories you pick.

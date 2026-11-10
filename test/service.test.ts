@@ -311,6 +311,32 @@ test("a wake-up address registered for a repository gets a bare request for each
   ]);
 });
 
+test("an event keeps at most six wake-ups open at once, as Workers allow", async () => {
+  for (let n = 0; n < 8; n++)
+    await send("/wake", asUser({ repository: "simon/app", url: `https://m${n}.example.com/` }));
+  const github = globalThis.fetch;
+  let open = 0;
+  let most = 0;
+  let woken = 0;
+  // Each machine holds its request open a moment, as one waking from sleep does.
+  globalThis.fetch = Object.assign(
+    async (input: string | URL | Request, init?: RequestInit) => {
+      if (!String(input).endsWith(".example.com/")) return github(input, init);
+      open++;
+      most = Math.max(most, open);
+      await new Promise((done) => setTimeout(done, 5));
+      open--;
+      woken++;
+      return new Response(null, { status: 204 });
+    },
+    { preconnect: realFetch.preconnect },
+  );
+  const event = JSON.stringify({ repository: { full_name: "simon/App" } });
+  expect((await send("/webhook", await signed(event))).status).toBe(204);
+  expect(woken).toBe(8);
+  expect(most).toBeLessThanOrEqual(6);
+});
+
 test("an event for a repository with no address, or none at all, wakes nobody", async () => {
   await send("/wake", asUser({ repository: "simon/app", url: "https://demo.sprites.app/github" }));
   asked = [];
