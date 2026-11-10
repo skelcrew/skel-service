@@ -107,7 +107,7 @@ run with `bunx`, so nothing is added to this repository.
    jq -r .webhook_secret app.json | bunx wrangler secret put WEBHOOK_SECRET
    ```
 
-   If the app's slug isn't `skel`, set `APP_SLUG` in `wrangler.toml` to it.
+   If the app's slug isn't `skel-ai`, set `APP_SLUG` in `wrangler.toml` to it.
 5. **Deploy**, then point the domain at the Worker in Cloudflare's dashboard, under the
    Worker's Domains and Routes:
 
@@ -130,7 +130,7 @@ same plugin, the same setup, and one way through the code.
 
 1. In the app's settings on GitHub, under Private keys, generate a new key. GitHub downloads
    it as a `.pem` file.
-2. Set it: `bunx wrangler secret put PRIVATE_KEY < skel.<date>.private-key.pem`. Workers pick
+2. Set it: `bunx wrangler secret put PRIVATE_KEY < skel-ai.<date>.private-key.pem`. Workers pick
    up a secret at once.
 3. Check that skel still reads GitHub, such as with `skel task ls` on a machine with the
    plugin. Then delete the old key on GitHub, and the `.pem` file.

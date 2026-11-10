@@ -77,7 +77,7 @@ afterEach(() => {
 
 const env: Env = {
   APP_ID: "1234",
-  APP_SLUG: "skel",
+  APP_SLUG: "skel-ai",
   PRIVATE_KEY: privateKey,
   CLIENT_ID: "Iv1.client",
   CLIENT_SECRET: "client-secret",
@@ -124,7 +124,7 @@ test("the service names the app's install page and its client ID", async () => {
   const response = await send("/");
   expect(response.status).toBe(200);
   expect(await response.json()).toEqual({
-    install: "https://github.com/apps/skel/installations/new",
+    install: "https://github.com/apps/skel-ai/installations/new",
     client_id: "Iv1.client",
   });
 });
@@ -196,7 +196,7 @@ test("no token for a repository you can't reach", async () => {
 test("no token where the app isn't installed, and the answer says where to install it", async () => {
   const response = await send("/token", asUser({ repository: "simon/other" }));
   expect(response.status).toBe(404);
-  expect(await response.text()).toContain("https://github.com/apps/skel/installations/new");
+  expect(await response.text()).toContain("https://github.com/apps/skel-ai/installations/new");
   expect(asked.some((a) => a.url.endsWith("/access_tokens"))).toBe(false);
 });
 

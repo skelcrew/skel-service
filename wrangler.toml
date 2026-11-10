@@ -6,7 +6,7 @@ compatibility_date = "2026-10-01"
 
 [vars]
 # The app's name in its links, github.com/apps/<slug>.
-APP_SLUG = "skel"
+APP_SLUG = "skel-ai"
 
 # The only lasting record: each repository's wake-up addresses.
 [[kv_namespaces]]
