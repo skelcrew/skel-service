@@ -131,7 +131,7 @@ async function token(request: Request, env: Env): Promise<Response> {
   if (!made)
     return refuse(
       404,
-      `skel's GitHub App isn't installed on ${repository.fullName}: install it at ${installPage(env)}`,
+      `Skelcrew's GitHub App isn't installed on ${repository.fullName}: install it at ${installPage(env)}`,
     );
   return json(made);
 }

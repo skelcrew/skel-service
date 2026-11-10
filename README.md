@@ -1,16 +1,17 @@
 # skel-service
 
-skel's GitHub App is shared by everyone who uses skel. Its secrets can't ship inside skel,
-where anyone could read them. So this small service holds them, and does only what needs them:
+Skelcrew's GitHub App is shared by everyone who uses Skelcrew. Its secrets can't ship inside
+Skelcrew, where anyone could read them. So this small service holds them, and does only what
+needs them:
 
 - it makes GitHub tokens, each for one repository, for one hour;
 - it renews your sign-in to the app, which needs the app's client secret;
 - it passes GitHub's events on as wake-ups, so a Sprite that sleeps wakes when you comment on
   or merge a PR.
 
-It is one Cloudflare Worker with no database and no dependencies. skel's GitHub plugin,
-[skel-plugin-github](https://github.com/skelcrew/skel-plugin-github), is its only client. skel
-itself never needs it: with no plugins, skel runs on git alone.
+It is one Cloudflare Worker with no database and no dependencies. Skelcrew's GitHub plugin,
+[skel-plugin-github](https://github.com/skelcrew/skel-plugin-github), is its only client.
+Skelcrew itself never needs it: with no plugins, Skelcrew runs on git alone.
 
 ## What the service sees
 
@@ -35,8 +36,9 @@ gets a token with all of the app's permissions there. Anyone else gets one that 
 the app's access never reaches past yours. Only someone who can push registers or removes a
 wake-up address for a repository.
 
-While the service is down, a token can't be renewed. Within the hour skel can't read, push or
-post on GitHub, and threads wait. Nothing is lost: once it is back, skel's next poll catches up.
+While the service is down, a token can't be renewed. Within the hour Skelcrew can't read, push
+or post on GitHub, and threads wait. Nothing is lost: once it is back, Skelcrew's next poll
+catches up.
 
 ## Calls
 
@@ -61,8 +63,8 @@ The app asks GitHub for:
 | --- | --- | --- |
 | Contents | Read and write | Pushing a thread's branch |
 | Pull requests | Read and write | Opening PRs and posting reviews |
-| Issues | Read and write | Tasks, the `skel` label and the 👀 reaction |
-| Commit statuses | Read and write | The `skel/review` check |
+| Issues | Read and write | Tasks, the `skelcrew` label and the 👀 reaction |
+| Commit statuses | Read and write | The `skelcrew/check` status check |
 | Checks | Read | A failed check |
 | Actions | Read | A failed check's log |
 | Metadata | Read | Always needed |
@@ -77,10 +79,12 @@ suites and statuses. They are used only for wake-ups.
 You need a Cloudflare account and the app's secrets. Deploying uses Cloudflare's `wrangler`,
 run with `bunx`, so nothing is added to this repository.
 
-1. **Register the app.** Open `register.html` in your browser. Change the organization in its
-   form's address if the app isn't for `skelcrew`, and press the button. GitHub shows the app,
-   and the button that creates it. It then sends you to `https://skel.run/?code=…`: copy the
-   code from the address. Within an hour, run:
+1. **Register the app.** If it already exists, update it as
+   [Updating an existing app](#updating-an-existing-app) says instead. To register it, open
+   `register.html` in your browser. Change the organization in its form's address if the app
+   isn't for `skelcrew`, and press the button. GitHub shows the app, and the button that
+   creates it. It then sends you to `https://skelcrew.dev/?code=…`: copy the code from the
+   address. Within an hour, run:
 
    ```sh
    gh api -X POST /app-manifests/<code>/conversions > app.json
@@ -107,7 +111,7 @@ run with `bunx`, so nothing is added to this repository.
    jq -r .webhook_secret app.json | bunx wrangler secret put WEBHOOK_SECRET
    ```
 
-   If the app's slug isn't `skel-ai`, set `APP_SLUG` in `wrangler.toml` to it.
+   If the app's slug isn't `skelcrew`, set `APP_SLUG` in `wrangler.toml` to it.
 5. **Deploy**, then point the domain at the Worker in Cloudflare's dashboard, under the
    Worker's Domains and Routes:
 
@@ -115,7 +119,29 @@ run with `bunx`, so nothing is added to this repository.
    bunx wrangler deploy
    ```
 
-6. **Check it**: `curl https://skel.run/` answers the install page and client ID.
+6. **Check it**: `curl https://skelcrew.dev/` answers the install page and client ID.
+
+## Updating an existing app
+
+Skelcrew's app, `skelcrew`, existed before this service. Rather than register it again, make
+its settings on GitHub match the manifest in `register.html`, then make its secrets:
+
+1. **Permissions and events.** Under Permissions & events, give it the permissions in the
+   table above, and subscribe it to the events listed under the table. Each installation
+   accepts the new permissions before they apply there.
+2. **Webhook.** Under General, set the homepage URL to `https://skelcrew.dev`, tick Webhook
+   Active, and set the webhook URL to `https://skelcrew.dev/webhook`.
+3. **Device flow.** Under General, tick "Enable Device Flow", and leave "Expire user
+   authorization tokens" ticked.
+4. **Public.** Under Advanced, make it public, so anyone can install it.
+5. **A webhook secret.** Make one, such as with `openssl rand -hex 32`. Put it in the Webhook
+   secret field under General, and set it with `bunx wrangler secret put WEBHOOK_SECRET`.
+6. **A new private key.** Under Private keys, generate one, and set it with
+   `bunx wrangler secret put PRIVATE_KEY < skelcrew.<date>.private-key.pem`.
+7. **The rest.** Under General, generate a client secret. Set `APP_ID` (the App ID, 5524475),
+   `CLIENT_ID` and `CLIENT_SECRET` with `bunx wrangler secret put`.
+
+Then deploy from step 3 of Deploying, and skip step 4, whose secrets are now set.
 
 ## Running your own
 
@@ -123,21 +149,21 @@ To depend on no one, run the service yourself, with a GitHub App of your own. Fo
 above with your own names: in `register.html`, give the app a name of its own and your own
 service's address in `url`, `redirect_url` and `hook_attributes.url`, and post it to your
 organization or to `https://github.com/settings/apps/new` for your own account. Then, in the
-GitHub plugin's setup, give your service's address in place of `https://skel.run`. It is the
-same plugin, the same setup, and one way through the code.
+GitHub plugin's setup, give your service's address in place of `https://skelcrew.dev`. It is
+the same plugin, the same setup, and one way through the code.
 
 ## Rotating the key
 
 1. In the app's settings on GitHub, under Private keys, generate a new key. GitHub downloads
    it as a `.pem` file.
-2. Set it: `bunx wrangler secret put PRIVATE_KEY < skel-ai.<date>.private-key.pem`. Workers pick
+2. Set it: `bunx wrangler secret put PRIVATE_KEY < skelcrew.<date>.private-key.pem`. Workers pick
    up a secret at once.
-3. Check that skel still reads GitHub, such as with `skel task ls` on a machine with the
+3. Check that Skelcrew still reads GitHub, such as with `sc task ls` on a machine with the
    plugin. Then delete the old key on GitHub, and the `.pem` file.
 
 The client secret and the webhook secret rotate the same way: make a new one on GitHub, set it
 with `wrangler secret put`, then remove the old one. A webhook secret changed on GitHub before
-the Worker drops events until both match, and skel's polling covers them meanwhile.
+the Worker drops events until both match, and Skelcrew's polling covers them meanwhile.
 
 The key may be in either form, the PKCS#1 GitHub gives (`BEGIN RSA PRIVATE KEY`) or PKCS#8.
 

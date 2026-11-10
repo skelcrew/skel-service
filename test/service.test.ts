@@ -77,7 +77,7 @@ afterEach(() => {
 
 const env: Env = {
   APP_ID: "1234",
-  APP_SLUG: "skel-ai",
+  APP_SLUG: "skelcrew",
   PRIVATE_KEY: privateKey,
   CLIENT_ID: "Iv1.client",
   CLIENT_SECRET: "client-secret",
@@ -109,7 +109,11 @@ const context = { waitUntil: (promise: Promise<unknown>) => void waiting.push(pr
 
 // Sends a request to the service, as the plugin or GitHub would.
 async function send(path: string, init: RequestInit = {}) {
-  const response = await service.fetch(new Request(`https://skel.run${path}`, init), env, context);
+  const response = await service.fetch(
+    new Request(`https://skelcrew.dev${path}`, init),
+    env,
+    context,
+  );
   await Promise.all(waiting);
   return response;
 }
@@ -124,7 +128,7 @@ test("the service names the app's install page and its client ID", async () => {
   const response = await send("/");
   expect(response.status).toBe(200);
   expect(await response.json()).toEqual({
-    install: "https://github.com/apps/skel-ai/installations/new",
+    install: "https://github.com/apps/skelcrew/installations/new",
     client_id: "Iv1.client",
   });
 });
@@ -161,7 +165,7 @@ test("a key in the PKCS#8 form GitHub doesn't give works too", async () => {
     publicKeyEncoding: { type: "spki", format: "pem" },
   });
   const response = await service.fetch(
-    new Request("https://skel.run/token", asUser({ repository: "simon/app" })),
+    new Request("https://skelcrew.dev/token", asUser({ repository: "simon/app" })),
     { ...env, PRIVATE_KEY: pkcs8.privateKey },
     context,
   );
@@ -184,7 +188,9 @@ test("a repository's name may hold two dots in a row", async () => {
       : github(method, url, auth);
   const response = await send("/token", asUser({ repository: "simon/app..test" }));
   expect(response.status).toBe(404);
-  expect(await response.text()).toContain("isn't installed on simon/app..test");
+  expect(await response.text()).toContain(
+    "Skelcrew's GitHub App isn't installed on simon/app..test",
+  );
 });
 
 test("no token for a repository you can't reach", async () => {
@@ -196,7 +202,7 @@ test("no token for a repository you can't reach", async () => {
 test("no token where the app isn't installed, and the answer says where to install it", async () => {
   const response = await send("/token", asUser({ repository: "simon/other" }));
   expect(response.status).toBe(404);
-  expect(await response.text()).toContain("https://github.com/apps/skel-ai/installations/new");
+  expect(await response.text()).toContain("https://github.com/apps/skelcrew/installations/new");
   expect(asked.some((a) => a.url.endsWith("/access_tokens"))).toBe(false);
 });
 
