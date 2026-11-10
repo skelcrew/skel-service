@@ -44,8 +44,11 @@ async function body(request: Request): Promise<Record<string, unknown> | null> {
 }
 
 // Returns an owner/name a GitHub repository could have, so nothing else reaches a GitHub path.
+// A name may hold two dots in a row, such as app..test, but may not be . or .. itself.
 const repositoryName = (value: unknown) =>
-  typeof value === "string" && /^[\w.-]+\/[\w.-]+$/.test(value) && !value.includes("..")
+  typeof value === "string" &&
+  /^[\w.-]+\/[\w.-]+$/.test(value) &&
+  value.split("/").every((part) => part !== "." && part !== "..")
     ? value
     : null;
 

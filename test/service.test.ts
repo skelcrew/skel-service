@@ -172,6 +172,16 @@ test("someone who can't push to the repository gets a token that only reads", as
   expect(Object.values(body.permissions)).toEqual(Array(7).fill("read"));
 });
 
+test("a repository's name may hold two dots in a row", async () => {
+  answer = (method, url, auth) =>
+    url === "https://api.github.com/repos/simon/app..test"
+      ? json({ full_name: "simon/app..test", name: "app..test", permissions: { push: true } })
+      : github(method, url, auth);
+  const response = await send("/token", asUser({ repository: "simon/app..test" }));
+  expect(response.status).toBe(404);
+  expect(await response.text()).toContain("isn't installed on simon/app..test");
+});
+
 test("no token for a repository you can't reach", async () => {
   const response = await send("/token", asUser({ repository: "simon/secret" }));
   expect(response.status).toBe(404);
@@ -193,6 +203,7 @@ test("no token without a sign-in GitHub accepts", async () => {
 
 test("a request that isn't what the service takes is refused", async () => {
   expect((await send("/token", asUser({ repository: "../x" }))).status).toBe(400);
+  expect((await send("/token", asUser({ repository: "simon/.." }))).status).toBe(400);
   expect((await send("/token", { ...asUser({}), body: "not json" })).status).toBe(400);
   expect((await send("/nothing")).status).toBe(404);
 });
