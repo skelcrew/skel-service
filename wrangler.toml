@@ -8,10 +8,11 @@ compatibility_date = "2026-10-01"
 # The app's name in its links, github.com/apps/<slug>.
 APP_SLUG = "skelcrew"
 
-# The only lasting record: each repository's wake-up addresses.
+# The only lasting record: each repository's wake-up addresses. Running your own service, put
+# the id of your own KV namespace here.
 [[kv_namespaces]]
 binding = "WAKE"
-id = "put the id of your KV namespace here"
+id = "649c9f37587a4931b39f6c15652cb4c8"
 
 # How often one person may ask for a token or register an address: 30 times a minute.
 [[ratelimits]]
