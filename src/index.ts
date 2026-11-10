@@ -231,6 +231,28 @@ async function wakeAll(urls: string[]): Promise<void> {
 // Returns the page that installs the app on repositories you pick.
 const installPage = (env: Env) => `https://github.com/apps/${env.APP_SLUG}/installations/new`;
 
+// The page GitHub sends you to after you install the app or change its repositories, set as
+// the app's Setup URL. The plugin's setup in your terminal sees the install by itself, so
+// the page only says you are done there. It shows nothing from its link, so nobody can make
+// it say anything else, and it calls nothing.
+const installedPage = `<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Skelcrew is installed</title>
+<style>
+  body { font: 18px/1.5 system-ui, sans-serif; margin: 0; min-height: 100vh; display: grid;
+    place-items: center; background: #fff; color: #1f2328; }
+  @media (prefers-color-scheme: dark) { body { background: #111111; color: #e6edf3; } }
+  main { padding: 16px; max-width: 32em; text-align: center; }
+</style>
+<main>
+  <p><strong>Skelcrew's GitHub App is installed.</strong></p>
+  <p>You can close this tab and go back to your terminal.</p>
+</main>
+</html>
+`;
+
 export default {
   // Answers one request. Errors are logged by their message alone, never with the request's
   // body, which can hold a token or an event's text.
@@ -240,6 +262,10 @@ export default {
     try {
       if (route === "GET /github")
         return json({ install: installPage(env), client_id: env.CLIENT_ID });
+      if (route === "GET /github/installed")
+        return new Response(installedPage, {
+          headers: { "content-type": "text/html; charset=utf-8" },
+        });
       if (route === "POST /github/token") return await token(request, env);
       if (route === "POST /github/renew") return await renewal(request, env);
       if (route === "POST /github/wake") return await wake(request, env, true);

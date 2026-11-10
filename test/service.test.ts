@@ -133,6 +133,20 @@ test("the service names the app's install page and its client ID", async () => {
   });
 });
 
+test("after installing the app, GitHub sends you to a page that says to go back to your terminal", async () => {
+  const response = await send(
+    "/github/installed?installation_id=9&setup_action=install&<script>=x",
+  );
+  expect(response.status).toBe(200);
+  expect(response.headers.get("content-type")).toBe("text/html; charset=utf-8");
+  const page = await response.text();
+  expect(page).toContain("Skelcrew's GitHub App is installed.");
+  expect(page).toContain("go back to your terminal");
+  // Nothing from the link is shown, so nobody can put words or code on the page.
+  expect(page).not.toContain("script");
+  expect(asked).toEqual([]);
+});
+
 test("a token works for one repository, and is made with the app's signed JWT", async () => {
   const response = await send("/github/token", asUser({ repository: "simon/app" }));
   expect(response.status).toBe(200);
