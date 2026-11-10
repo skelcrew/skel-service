@@ -234,7 +234,8 @@ const installPage = (env: Env) => `https://github.com/apps/${env.APP_SLUG}/insta
 // The page GitHub sends you to after you install the app or change its repositories, set as
 // the app's Setup URL. The plugin's setup in your terminal sees the install by itself, so
 // the page only says you are done there. It shows nothing from its link, so nobody can make
-// it say anything else, and it calls nothing.
+// it say anything else, and it calls nothing. Skelcrew's logo is drawn in the page, in the text's
+// colour, so it follows light and dark and nothing else is loaded.
 const installedPage = `<!doctype html>
 <html lang="en">
 <meta charset="utf-8">
@@ -245,8 +246,19 @@ const installedPage = `<!doctype html>
     place-items: center; background: #fff; color: #1f2328; }
   @media (prefers-color-scheme: dark) { body { background: #111111; color: #e6edf3; } }
   main { padding: 16px; max-width: 32em; text-align: center; }
+  svg { width: 64px; height: auto; }
 </style>
 <main>
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="150 110 760 800" role="img" aria-label="Skelcrew">
+    <g fill="currentColor">
+      <rect x="362" y="128" width="524" height="146"/>
+      <rect x="287" y="252" width="151" height="146"/>
+      <rect x="362" y="376" width="449" height="146"/>
+      <rect x="736" y="500" width="150" height="146"/>
+      <rect x="287" y="624" width="524" height="146"/>
+    </g>
+    <path stroke="currentColor" stroke-opacity="0.4" stroke-width="14" fill="none" d="M350 155 300 252M275 278l-50 100M176 398v122M225 525l50 102M275 650l-50 100M176 770v122M215 889h521M800 773l-54 102M873 650l-53 100M873 278l-53 100"/>
+  </svg>
   <p><strong>Skelcrew's GitHub App is installed.</strong></p>
   <p>You can close this tab and go back to your terminal.</p>
 </main>
