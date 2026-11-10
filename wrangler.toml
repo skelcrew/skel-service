@@ -1,0 +1,26 @@
+# How Cloudflare runs skel's service. The app's secrets are Worker secrets, set with
+# `bunx wrangler secret put`, and never written here.
+name = "skel-service"
+main = "src/index.ts"
+compatibility_date = "2026-10-01"
+
+# The service answers only under skelcrew.dev/github, which leaves the rest of the domain free
+# for the website and the install line.
+workers_dev = false
+routes = [{ pattern = "skelcrew.dev/github*", zone_name = "skelcrew.dev" }]
+
+[vars]
+# The app's name in its links, github.com/apps/<slug>.
+APP_SLUG = "skelcrew"
+
+# The only lasting record: each repository's wake-up addresses. Running your own service, put
+# the id of your own KV namespace here.
+[[kv_namespaces]]
+binding = "WAKE"
+id = "649c9f37587a4931b39f6c15652cb4c8"
+
+# How often one person may ask for a token or register an address: 30 times a minute.
+[[ratelimits]]
+name = "LIMIT"
+namespace_id = "1001"
+simple = { limit = 30, period = 60 }

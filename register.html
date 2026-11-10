@@ -1,0 +1,34 @@
+<!doctype html>
+<!-- Registers Skelcrew's GitHub App from its manifest. Open this file in your browser, change the
+     organization in the form's address if it isn't yours, and press the button. -->
+<meta charset="utf-8">
+<title>Register Skelcrew's GitHub App</title>
+<form action="https://github.com/organizations/skelcrew/settings/apps/new" method="post">
+  <textarea name="manifest" rows="30" cols="90">{
+  "name": "skelcrew",
+  "url": "https://skelcrew.dev",
+  "redirect_url": "https://skelcrew.dev/github",
+  "public": true,
+  "hook_attributes": { "url": "https://skelcrew.dev/github/webhook", "active": true },
+  "default_permissions": {
+    "contents": "write",
+    "pull_requests": "write",
+    "issues": "write",
+    "statuses": "write",
+    "checks": "read",
+    "actions": "read",
+    "metadata": "read"
+  },
+  "default_events": [
+    "issues",
+    "issue_comment",
+    "pull_request",
+    "pull_request_review",
+    "pull_request_review_comment",
+    "check_run",
+    "check_suite",
+    "status"
+  ]
+}</textarea>
+  <p><button type="submit">Register the app on GitHub</button></p>
+</form>
