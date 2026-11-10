@@ -58,12 +58,16 @@ export async function appJwt(appId: string, privateKey: string): Promise<string>
 }
 
 // Returns GitHub's JSON answer to a GET, with the token as bearer, or null when GitHub
-// answers anything but success, so the caller says what that means.
+// refuses the token or finds nothing there, so the caller says what that means. Any other
+// failure, such as a rate limit or an outage, throws: told to sign in again for it, you
+// would throw away a sign-in that still works, so the service asks you to try again.
 async function get(path: string, token: string): Promise<unknown> {
   const response = await fetch(`https://api.github.com${path}`, {
     headers: { ...headers, authorization: `Bearer ${token}` },
   });
-  return response.ok ? response.json() : null;
+  if (response.status === 401 || response.status === 404) return null;
+  if (!response.ok) throw new Error(`GitHub answered ${path} with ${response.status}`);
+  return response.json();
 }
 
 // Returns who a GitHub sign-in belongs to, or null when GitHub doesn't accept it, so the
@@ -150,7 +154,10 @@ export async function renew(
       refresh_token: refreshToken,
     }),
   });
-  const got = response.ok ? await response.json() : null;
+  // A refused refresh token comes back as a 200, so a failure here is GitHub's own, and
+  // throws for the same reason a failed GET does.
+  if (!response.ok) throw new Error(`GitHub renewed no sign-in: ${response.status}`);
+  const got = await response.json();
   if (
     !isRecord(got) ||
     typeof got.access_token !== "string" ||

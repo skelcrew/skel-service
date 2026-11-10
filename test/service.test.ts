@@ -197,6 +197,20 @@ test("a request that isn't what the service takes is refused", async () => {
   expect((await send("/nothing")).status).toBe(404);
 });
 
+test("GitHub failing for a while asks you to try again, and never to sign in again", async () => {
+  const down = (path: string) => (method: string, url: string, auth: string | null) =>
+    url.endsWith(path) ? json({ message: "Server Error" }, 503) : github(method, url, auth);
+  answer = down("/user");
+  expect((await send("/token", asUser({ repository: "simon/app" }))).status).toBe(502);
+  answer = down("/repos/simon/app");
+  expect((await send("/token", asUser({ repository: "simon/app" }))).status).toBe(502);
+  answer = down("/repos/simon/App/installation");
+  expect((await send("/token", asUser({ repository: "simon/app" }))).status).toBe(502);
+  answer = down("/login/oauth/access_token");
+  const renewal = { method: "POST", body: JSON.stringify({ refresh_token: "ghr_old" }) };
+  expect((await send("/renew", renewal)).status).toBe(502);
+});
+
 test("someone asking for tokens too often is told to wait", async () => {
   limited.add("user:7");
   const response = await send("/token", asUser({ repository: "simon/app" }));
