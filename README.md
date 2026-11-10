@@ -48,6 +48,7 @@ answers are JSON. A refusal is `{ "error": "<what to fix>" }` with an HTTP statu
 | Request | Body | Answer |
 | --- | --- | --- |
 | `GET /github` | | `{ install, client_id }`: the page that installs the app, and the client ID the plugin's device flow signs in with |
+| `GET /github/installed` | | A page that says the app is installed and to go back to your terminal. Set it as the app's Setup URL |
 | `POST /github/token` | `{ repository }`, as `owner/name`, with your sign-in as `Authorization: Bearer` | `{ token, expires }` |
 | `POST /github/renew` | `{ refresh_token }` | `{ access_token, expires_in, refresh_token, refresh_token_expires_in }` |
 | `POST /github/wake` | `{ repository, url }`, with your sign-in | Nothing (204). Registers the address |
@@ -133,7 +134,8 @@ its settings on GitHub match the manifest in `register.html`, then make its secr
 2. **Webhook.** Under General, set the homepage URL to `https://skelcrew.dev`, tick Webhook
    Active, and set the webhook URL to `https://skelcrew.dev/github/webhook`.
 3. **Device flow.** Under General, tick "Enable Device Flow", and leave "Expire user
-   authorization tokens" ticked.
+   authorization tokens" ticked. Under "Post installation", set the Setup URL to
+   `https://skelcrew.dev/github/installed` and tick "Redirect on update".
 4. **Public.** Under Advanced, make it public, so anyone can install it.
 5. **A webhook secret.** Make one, such as with `openssl rand -hex 32`. Put it in the Webhook
    secret field under General, and set it with `bunx wrangler secret put WEBHOOK_SECRET`.
