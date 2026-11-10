@@ -4,6 +4,11 @@ name = "skel-service"
 main = "src/index.ts"
 compatibility_date = "2026-10-01"
 
+# The service answers only under skelcrew.dev/github, which leaves the rest of the domain free
+# for the website and the install line.
+workers_dev = false
+routes = [{ pattern = "skelcrew.dev/github*", zone_name = "skelcrew.dev" }]
+
 [vars]
 # The app's name in its links, github.com/apps/<slug>.
 APP_SLUG = "skelcrew"

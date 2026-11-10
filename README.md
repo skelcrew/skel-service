@@ -113,8 +113,8 @@ run with `bunx`, so nothing is added to this repository.
    ```
 
    If the app's slug isn't `skelcrew`, set `APP_SLUG` in `wrangler.toml` to it.
-5. **Deploy**, then point the domain at the Worker in Cloudflare's dashboard, under the
-   Worker's Domains and Routes:
+5. **Deploy.** The route in `wrangler.toml` sends `skelcrew.dev/github` to the Worker, so the
+   domain must be a zone in your Cloudflare account:
 
    ```sh
    bunx wrangler deploy
@@ -149,7 +149,8 @@ Then deploy from step 3 of Deploying, and skip step 4, whose secrets are now set
 To depend on no one, run the service yourself, with a GitHub App of your own. Follow the steps
 above with your own names: in `register.html`, give the app a name of its own and your own
 service's address in `url`, `redirect_url` and `hook_attributes.url`, and post it to your
-organization or to `https://github.com/settings/apps/new` for your own account. Then, in the
+organization or to `https://github.com/settings/apps/new` for your own account. In
+`wrangler.toml`, change the route and its zone to your own domain. Then, in the
 GitHub plugin's setup, give your service's address in place of `https://skelcrew.dev`. It is
 the same plugin, the same setup, and one way through the code.
 
