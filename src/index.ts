@@ -163,10 +163,13 @@ async function wake(request: Request, env: Env, add: boolean): Promise<Response>
     await env.WAKE.delete(key);
     return new Response(null, { status: 204 });
   }
+  // KV takes one write to a key a second, and a machine may register twice in a row. An
+  // address already kept is left alone, so registering it again never fails.
+  if ((await env.WAKE.get(key)) !== null) return new Response(null, { status: 204 });
   // Machines registering at once may each see room for one more, so the limit can be passed
   // by a few. It only keeps the requests on each event bounded, so that is fine.
   const known = await wakeKeys(env, repository.fullName);
-  if (!known.includes(key) && known.length >= mostAddresses)
+  if (known.length >= mostAddresses)
     return refuse(400, `${repository.fullName} has ${mostAddresses} wake-up addresses already`);
   await env.WAKE.put(key, url);
   return new Response(null, { status: 204 });

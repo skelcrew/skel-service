@@ -18,6 +18,7 @@ let answer: (method: string, url: string, auth: string | null) => Response | und
 const realFetch = globalThis.fetch;
 let limited: Set<string>;
 let store: Map<string, string>;
+let written: Map<string, number>;
 let waiting: Promise<unknown>[];
 
 const json = (value: unknown, status = 200) =>
@@ -56,6 +57,7 @@ beforeEach(() => {
   answer = github;
   limited = new Set();
   store = new Map();
+  written = new Map();
   waiting = [];
   globalThis.fetch = Object.assign(
     async (input: string | URL | Request, init?: RequestInit) => {
@@ -82,7 +84,10 @@ const env: Env = {
   WEBHOOK_SECRET: "webhook-secret",
   WAKE: {
     get: async (key) => store.get(key) ?? null,
+    // Workers KV refuses a second write to one key within a second.
     put: async (key, value) => {
+      if (Date.now() - (written.get(key) ?? 0) < 1000) throw new Error("KV PUT failed: 429");
+      written.set(key, Date.now());
       store.set(key, value);
     },
     delete: async (key) => {
