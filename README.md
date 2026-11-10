@@ -31,8 +31,8 @@ alone. One person may ask 30 times a minute.
 
 A token works for one repository and lasts an hour. Someone who can push to the repository
 gets a token with all of the app's permissions there. Anyone else gets one that only reads, so
-the app's access never reaches past yours. Only someone who can push registers a wake-up
-address for a repository.
+the app's access never reaches past yours. Only someone who can push registers or removes a
+wake-up address for a repository.
 
 While the service is down, a token can't be renewed. Within the hour skel can't read, push or
 post on GitHub, and threads wait. Nothing is lost: once it is back, skel's next poll catches up.

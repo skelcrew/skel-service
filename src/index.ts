@@ -126,15 +126,16 @@ async function renewal(request: Request, env: Env): Promise<Response> {
 }
 
 // Registers or removes a wake-up address for a repository. Only someone who can push there
-// may register one, as each event then sends a request to it.
+// may do either: each event sends a request to every address, and on a public repository
+// anyone who can read it could otherwise switch off someone else's wake-ups.
 async function wake(request: Request, env: Env, add: boolean): Promise<Response> {
   const asked = await caller(request, env);
   if ("refused" in asked) return asked.refused;
   const { given, repository } = asked;
   const url = wakeAddress(given.url);
   if (!url) return refuse(400, "a wake-up address must be an https URL");
-  if (add && !repository.push)
-    return refuse(403, `you can't push to ${repository.fullName}, so skel can't be woken for it`);
+  if (!repository.push)
+    return refuse(403, `you can't push to ${repository.fullName}, so you can't set its wake-ups`);
   const before = await addresses(env, repository.fullName);
   const after = add ? [...new Set([...before, url])] : before.filter((known) => known !== url);
   if (after.length > mostAddresses)

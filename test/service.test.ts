@@ -24,11 +24,17 @@ const json = (value: unknown, status = 200) =>
   new Response(JSON.stringify(value), { status, headers: { "content-type": "application/json" } });
 
 // A GitHub where simon signs in with "user-token", can push to simon/app, can only read
-// simon/public, and the app is installed on both but not on simon/other.
+// simon/public, and the app is installed on both but not on simon/other. Its owner, ada,
+// signs in with "owner-token" and can push to simon/public.
 function github(method: string, url: string, auth: string | null): Response | undefined {
-  if (url === "https://api.github.com/user")
-    return auth === "Bearer user-token" ? json({ id: 7, login: "simon" }) : json({}, 401);
+  if (url === "https://api.github.com/user") {
+    if (auth === "Bearer user-token") return json({ id: 7, login: "simon" });
+    if (auth === "Bearer owner-token") return json({ id: 8, login: "ada" });
+    return json({}, 401);
+  }
   const repo = url.match(/^https:\/\/api\.github\.com\/repos\/([^/]+\/[^/]+)$/)?.[1];
+  if (repo === "simon/public" && auth === "Bearer owner-token")
+    return json({ full_name: "simon/public", name: "public", permissions: { push: true } });
   if (repo && auth === "Bearer user-token") {
     if (repo === "simon/app")
       return json({ full_name: "simon/App", name: "App", permissions: { push: true } });
@@ -304,6 +310,19 @@ test("only someone who can push registers a wake-up address, and only an https o
   expect((await send("/wake", plain)).status).toBe(400);
   expect((await send("/wake", asUser({ repository: "simon/app", url }, "stale"))).status).toBe(401);
   expect(store.size).toBe(0);
+});
+
+test("only someone who can push removes a wake-up address", async () => {
+  const url = "https://ada.sprites.app/github";
+  expect(
+    (await send("/wake", asUser({ repository: "simon/public", url }, "owner-token"))).status,
+  ).toBe(204);
+  const removal = await send("/unwake", asUser({ repository: "simon/public", url }));
+  expect(removal.status).toBe(403);
+  asked = [];
+  const event = JSON.stringify({ repository: { full_name: "simon/public" } });
+  await send("/webhook", await signed(event));
+  expect(asked.map((a) => a.url)).toEqual([url]);
 });
 
 test("the service logs no request body", async () => {
