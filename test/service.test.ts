@@ -142,6 +142,9 @@ test("after installing the app, GitHub sends you to a page that says to go back 
   const page = await response.text();
   expect(page).toContain("Skelcrew's GitHub App is installed.");
   expect(page).toContain("go back to your terminal");
+  // Skelcrew's logo, drawn in the page itself, so the page loads nothing else.
+  expect(page).toContain('<svg xmlns="http://www.w3.org/2000/svg"');
+  expect(page).toContain('aria-label="Skelcrew"');
   // Nothing from the link is shown, so nobody can put words or code on the page.
   expect(page).not.toContain("script");
   expect(asked).toEqual([]);
