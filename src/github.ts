@@ -2,7 +2,7 @@
 // for one repository, made as skel's GitHub App with its private key.
 
 // Identifies the service to GitHub, which refuses API requests without a user agent.
-const headers = { "user-agent": "skel-service", accept: "application/vnd.github+json" };
+const headers = { "user-agent": "skelcrew-service", accept: "application/vnd.github+json" };
 
 // Returns bytes as base64url, the encoding a JWT is written in.
 const base64url = (bytes: Uint8Array) =>

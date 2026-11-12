@@ -1,4 +1,4 @@
-# skel-service
+# skelcrew-service
 
 Skelcrew's GitHub App is shared by everyone who uses Skelcrew. Its secrets can't ship inside
 Skelcrew, where anyone could read them. So this small service holds them, and does only what
@@ -10,7 +10,7 @@ needs them:
   or merge a PR.
 
 It is one Cloudflare Worker with no database and no dependencies. Skelcrew's GitHub plugin,
-[skel-plugin-github](https://github.com/skelcrew/skel-plugin-github), is its only client.
+[skelcrew-github](https://github.com/skelcrew/skelcrew-github), is its only client.
 Skelcrew itself never needs it: with no plugins, Skelcrew runs on git alone.
 
 ## What the service sees
